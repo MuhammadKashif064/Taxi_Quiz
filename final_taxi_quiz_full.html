@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Taksikoe – Täysi Sovellus</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #e2ecf5, #ffffff);
+      margin: 0; padding: 0;
+    }
+    .container {
+      max-width: 800px;
+      margin: 40px auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      animation: fadeIn 0.6s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+    }
+    #timer {
+      font-size: 1.2em;
+      text-align: center;
+      margin: 20px 0;
+      color: #e53935;
+    }
+    .question {
+      font-size: 1.2em;
+      margin-bottom: 15px;
+    }
+    .choices label {
+      display: block;
+      background: #f5f8fa;
+      margin: 8px 0;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #d0d8e0;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .choices input[type="radio"] {
+      margin-right: 10px;
+    }
+    .choices label:hover {
+      background: #e2effe;
+    }
+    .btns {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    button {
+      background: #4a90e2;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      font-size: 1em;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #357bd8;
+    }
+    #resultBox {
+      margin-top: 30px;
+    }
+    .correct { color: green; }
+    .wrong { color: red; }
+    ol { padding-left: 20px; }
+    ol li { margin-bottom: 12px; }
+    @media (max-width: 600px) {
+      .btns { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Taksikoe – Kysymystä</h1>
+  <div id="timer">Aikaa jäljellä: 69:00</div>
+  <div id="quizBox">
+    <div class="question" id="questionBox"></div>
+    <div class="choices" id="choicesBox"></div>
+    <div class="btns">
+      <button onclick="checkAnswer()">Tarkista vastaus</button>
+      <button onclick="nextQuestion()">Seuraava</button>
+    </div>
+  </div>
+  <div id="resultBox"></div>
+</div>
+
+<script>
+const questions = [
+  {
+    q: "Asiakkaanasi oleva kiireinen herra möttönen pyytää sinua pysähtymään hyvinvilkkaasti liikennöidyllä paikkaan, jotta hän voi jäädä pois. Mikä seuraavista tilannetta koskevista väittämistä on oikean?",
+    options: [
+      "Herra mättösellä on oikeus valita pysähtymispaikka, sillä hän maksaa kyydistä.",
+      "Herra mättösellä on velvollisuus maksaa mahdollinen sakkomaksu. mikäli hän on pyytänyt pysähtymään kielletyssä paikassa.",
+      "asiakkaan turvallinen autoon tulo ja poistaminen on aina kuljettajan sinun vastuullesi, joten jos pysähtymispaikka on sellaiseksi, ettei herra mättönen voi siinä poistua, etsit paremmin paikan.",
+    ],
+    correct: 2
+  },
+  {
+    q: "Mikä seuraavista vaihtoehdoista on oikein?",
+    options: [
+      "Taksiluvan haltija on oikeus poikkeustapauksessa ohittaa kuljettajan alkolukon käyttövelvoliisuus.",
+      "Alkoholi ei tule nauttia ennen ajovuoroa, koska nautittu alkoholi aiheuttaa aina väsymystä ja neikentää ajokykyä.",
+      "Jos kuljettaja ei saa puhalluksen jälkeen ajoneuvoa käyntiin, kuljettaja voi aina vaihtaa sellaiseen ajoneuvoon, jossa ei ole alkolukkoa.",
+    ],
+    correct: 1
+  },
+  {
+    q: "Miten toimit, kun asiakas pyytää ajamaan ylinopeutta?",
+    options: [
+      "Voit ajaa ylinopeutta, jos asiakas on sovittu, että hän maksaa ylinopeussakot.",
+      "Kerrot asiakkaalle, ettet voi ajaa ylinopeutta, mutta teet parhaasi, jotta hän pääsee turvallisesti perillä, nopein mahdollista reittiä.",
+      "voit ajaa ylinopeus, jos asiakkaalla on siihen perusteltu syy",
+    ],
+    correct: 1
+  },
+  {
+    q: "Miksi alkolukko vaaditaan pakollisena varusteena kunnan tilaamissa koulu-ja päivähoitokuljetuksissa?",
+    options: [
+      "Sillä estetään ajoneuvon liikuminen, jos kuljettaja on nauttinut alkoholia.",
+      "sillä poliisi tarkistaa liikenteen valvonnassa kuljettajan ajokunnon.",
+      "Se on tarkoitettu ainoastaan työnantajan seurantavälineeksi kuljettajan alkoholin käytöstä sillä poliisi tarkistaa liikenteen valvonnassa kuljettajan ajokunnon.",
+    ],
+    correct: 0
+  },
+  {
+    q: "liikenteessä on poikkeusjärjestelyjä liikenneonnettomuuden vuoksi. Saat samaan aikaan keskenään ristiriitaisia toimintaohjeita kolmelta taholta, jotka eivät tiedä toisistaan. kenellä on seuraavista on määräysvalta eli kenen ohjeita sinun tulee noudattaa?",
+    options: [
+      "Liikennevirasto.",
+      "poliisi.",
+      "Työnantajasi.",
+    ],
+    correct: 1
+  },
+  {
+    q: "Seuraavassa on kolme väittämää koskien taksinkuljettajan velvollisuuksia. Mikä niistä mielestäsi on oikein?",
+    options: [
+      "Alle 135 cm:n pituinen lapsi tarvitsee aina turvalaitteen matkustaessaan taksissa.",
+      "Alle 3 vuotias istuu aina etupenkillä.",
+      "Lapsi voi matkustaa taksissa ilman turvalaitetta, kunhan istuu takapenkillä ja on turvavöissä. Alle 3 vuotias istuu aina etupenkillä.",
+    ],
+    correct: 0
+  },
+  {
+    q: "Mikä seuraavista hyvää viestimien käyttöön liittyvää asiakaspalvelua?",
+    options: [
+      "Kuljettaja voi lähettää viestejä, jos puhelin on äänettömällä.",
+      "puhelun soittaminen, jos se kuljetuksen suorittamiseksi on välttämätön.",
+      "Kuljettaja voi puhua henkilökohtaisia puheluita, jos asiakas",
+    ],
+    correct: 1
+  },
+  {
+    q: "17- vuotias Elviira kulkee viikoittain yksin tanssiharrastuksestaan kotiin kuopion keskuksesta pientaloalueelle. kuka vastaa turvavyön käytöstä?",
+    options: [
+      "Kuljettaja.",
+      "Elviira itse",
+      "Taksissa turvavyön käyttö on aina vapaaehtoista, joten turvavyötä ei tarvitse laittaa kiinni.",
+    ],
+    correct: 1
+  },
+  {
+    q: "Mitä taksinkuljettajalta edellytetään, jos asiakkaan on henkilö, joka ei kykene käyttämään puhuttua kieltä?",
+    options: [
+      "Taksinkuljettajalta edellytetään viittomakielentaitoa",
+      "Taksinkuljettaja tulee huolehtia, että asiakas pääsee määränpäähän.",
+      "Taksinkuljettaja edellytetään erityisammattitutkinnon suorittamista.",
+    ],
+    correct: 1
+  },
+  {
+    q: "Miten alle 3-vuotias lasta tulee kuljettaa takissa?",
+    options: [
+      "Lasta voi kuljettaa ilman turvalaitetta, kunhan istuu takapenkillä turvavyöhön kytkettynä.",
+      "Lasta voi kuljettaa täysi-ikäinen matkustajan sylissä takapenkillä.",
+      "Lapsi tulee kuljettaa aina asiamukaisessa turvalaitteessa",
+    ],
+    correct: 2
+  },
+    {
+    q:  "Kuinka toimit, kun tilausosoitteeseen saapuessasi huomaat yhden, matkustaja on kolmevuotias lapsi ja autossasi ei ole hänelle sopivaa turvalaitetta.",
+    options: [
+
+      "Pahoittelet asiakkaille, ettet voi ottaa heitä kyytiin ja ehdotat, että tilaat turvalaitteilia varustetun ajoneuvon asiakkaalle.",
+      "Toivotat asiakkaat tervetulleeksi takaisin, mutta lapsi tulee istua ilman turvalaitetta etupenkillä turvavöissä.",
+      "Toivotat asiakkaat tervetulleeksi taksiin, mutta lapsi tulee istua ilman turvalaitett",
+    ],
+    correct: 0
+  },
+  {
+    q: "Mikä seuraavista väittämistä pidä paikkaansa?",
+    options: [
+      "jos kuljettaja joutuu auton liikkuessa soittamaan puhelun, hänen ei tarvitse käyttää handfree laitetta.",
+      "Mikäli taksissa ei ole asiakkaita, saa kuljettaja ajoneuvon liikkuessa katsella televisiokuvaa Integroidusta näytöstä.",
+      "Kuljettaja saa soittaa puhelun ajon aikana handsfree-laitetta käyttäen, jos se on kuljetuksen suorittamiseksi välttämätön.",
+    ],
+    correct: 2
+  },
+  {
+    q: "Kuinka toimit, kun tilausosoitteeseen saapuessasi huomaat yhden, matkustaja on kolmevuotias lapsi ja autossasi ei ole hänelle sopivaa turvalaitetta.?",
+    options: [
+      "Pahoittelet asiakkaille, ettet voi ottaa heitä kyytiin ja ehdotat, että tilaat turvalaitteilia varustetun ajoneuvon asiakkaalle.",
+      "Toivotat asiakkaat tervetulleeksi takaisin, mutta lapsi tulee istua ilman turvalaitetta etupenkillä turvavöissä.",
+      "Toivotat asiakkaat tervetulleeksi taksiin, mutta lapsi tulee istua ilman turvalaitett",
+    ],
+    correct: 0
+  },
+  {
+    q: "Mikä seuraavista pyörätuolin käyttöä ja kiinnittämistä koskevista väitteistä pidä paikkaansa?",
+    options: [
+      "Sähköpyörätuolia ei tarvitse kiinnittää ajoneuvoon.",
+      "Asiakkaan ei tarvitse ajon aikana pyörätuolissa istuessa käyttää ajoneuvon turvavyötä.",
+      "Pyörätuoli tulee kiinnittää siten, että se estää ainoastaan sivusuuntaisen liikkee.",
+    ],
+    correct: 1
+  },
+   {
+    q: "Mikä seuraavista pyörätuolin käyttöä ja kiinnittymistä koskevista väitteistä pidä iikkaansa? pyörätuoli on kiinnitettävä sen rungosta Nimenomaan sisäkäyttöön wkoitettu       pyörätuoli ei tarvitse kiinnittää ajon aikana, jos taksimatkan pituus on alle ilometriä. Asiakas päättää kiinnitetäänkö pyörätuolia.",
+    options: [
+      "pyörätuoli on kiinnitettävä sen rungosta",
+      "Nimenomaan sisäkäyttöön tarkoitettu pyörätuoli ei tarvitse kiinnittää ajon aikana, jos taksimatkan pituus on alle kilometriä.",
+      "Asiakas päättää kiinnitetäänkö pyörätuolia.",
+    ],
+    correct: 0
+  },
+  {
+    q: "Kasvava osa taksinkuljetuksista hoidetaan taksi autoilla, jotka ovat esteettömiä. Miten pyörätuoli on kiinnitettävä, kun matkustaja istuu matka ajan pyörätuolissa?",
+    options: [
+      "Pyörätuolin jarrut laitetaan päälle ja pyörätuoli kiinnitetään auton turvavyötä.",
+      "Pyörätuolin jarrut laitetaan päälle ja pyörätuoli kiinnitetään tuolin rungosta neljästä pisteestä",
+      "Asiakas päättää kiinnitetäänkö pyörätuolia.",
+    ],
+    correct: 1
+  },
+  {
+    q: "kenen vastuulla on pyörätuolin huolellinen kiinnittäminen taksiin, Kun asiakkaan on mukana henkilökohtainen avustaja?",
+    options: [
+      "Asiakkaan.",
+      "Taksinkuljettaja",
+      "Henkilökohtaisen avustaja.",
+    ],
+    correct: 1
+  },
+  {
+    q: "Olet ottanut asiakkaan kyytiin paikkakuntaasi taksiasemalta. Olette ajaneet hyvän matkaa, kun taksin puhelin soi. Huomaat, että handsfree-laite on jäänyt kotiin. Mitä teet?",
+    options: [
+      "Vastaan puhelimeen normaalisti pahoittalet asiakkaalle puhelin aihettamaa häirösta ja vastaan sitten puheluun.",
+      "Pysähdyt tienvarren, jotta voit kirjoittaa ylös välttämättomiä tiedot. Voit pitää taksimittarin päällä.",
+      "Pahoittalet asiakaalle puhelin aiheuttamaa häiriöitä etkä vastaa siihen, soitat takaisin kyydin päätyttyä.",
+    ],
+    correct: 2
+  },
+  {
+    q: "Taksi mahdollistaa näkövammaisten asiakkaiden sujuvan liikumisen. Myös sinun kyytiisi taksinkuljenttajana tulee todennäköisesti näkövammaisia asiakkaita joskus näkovammaisilla asiakkailla on mukaan opaskoira. Mitä sinun on hyvä muistaa opaskoirasta?",
+    options: [
+      "Opaskoiraa tulee aina napsuttaa kiitoksesi hyvin tehdystä töistä.",
+      "Opaskoira istuu joko asiakkaan jalkatilassa tai matkatavaran tilassa.",
+      "Opaskoira istuu aina takapenkillä.",
+    ],
+    correct: 1
+  },
+  {
+    q: "Taksit hoitavat merkittävän osan kuntien järjestämistä koulu ja päiväkot kuljotuksista, Oppilaat ovat lapsia ja nuoria, mikä odellyttää kuljettajia kykysi toimeen heidän kanssaan, Oppilaskuljetuksia tekevän takainkuijettujan kuuluu mm?",
+    options: [
+      "Oppilaan hakeminen ja vieminen sisältä, kotitehtävien tarkastaminen ja oppilaan saattaminen luokkaan.",
+      "Oppilaan turvavyön varmistaminen ja vastuulliseen liikennekäyttämiseen opastaminen.",
+      "Jatkuva yhteydenpito oppilaiden vanhempien kanssa. Kuljettajan tulee soittaa kaikkien kyydissä olevien lasten vanhemmille, kun lapset tulevat kyytiin ja kun he poistuvat kyydistä. Näin varmistetaan, että jokainen lapsi on varmasti päässyt kouluun.",
+    ],
+    correct: 1
+  },
+  {
+    q: "Miten tulee toimia, kun liikuntavammaisella asiakkaalla on avustaja ja runsaasta jatkatavaroita mukanaan?",
+    options: [
+      "vustajan vastuu on huolehtia matkatavaroiden lastamisesta ja purkamisesta sillä väliin, kun kuljettaja avustaa asiakasta.",
+      "Avustaja avustaa matkustajaa kaikessa ja kuljettaja odottaa paikallaan koska hänellä ei ole mitään tehtävää.",
+      "Kuljettaja avustaa asiakkaat ajoneuvoon ja huolehti matkatavaroiden turvallisesta lastaamisesta ja purkamisesta.",
+    ],
+    correct: 2
+  },
+  {
+    q: "Mitä taksin kuljettaja tulee muistaa koulun ja päivähoito kuljetuksiin liittyen?",
+    options: [
+      "lapsille ei saa puhua matkan aikana.",
+      "lapselle tulee tarjota riittävästi virvokkeita.",
+      "kuljettaja tulee käyttäytyä vastuullisen aikuisen ja esimerkillisen roolimallin mukaisesti",
+    ],
+    correct: 2
+  },
+  {
+    q: "Koulukuljetuksia hoitava taksinkuljettaja on lapsen elämässä tärkeä aikuinen. Mitä on hyvä myistaa turvavyön käytöstä?",
+    options: [
+      "Kuljettajan ei tarvitse käyttää turvavyötä.",
+      "Myös kuljettaja tulee käyttää turvavyötä.",
+      "akapenkillä matkustavan ei tarvitse käyttää turvavyötä.",
+    ],
+    correct: 1
+  },
+  {
+    q: "Alkolukko on pakollinen varuste autoissa, jolla suoritetaan koulun tai päivähoitokuljetuksia, Aalkolukko säädetään siten, että ajoneuvon käynnistyminen estyy, jos kuljettajan uloshengitysilman Alkoholipitoisuus on?",
+    options: [
+      "0.10 milligrammaa alkoholia litrassa uloshengitysilmaa tai enemmän.",
+      "0.50 milligrammaa uloshengitysilmaa tai enemmän.",
+      "yli O uloshengitysilmaa tai enemmän",
+    ],
+    correct: 0
+  },
+  {
+    q: "Miten tulee toimia, kun tulee hyvin iäkkään hitaasti liikkuvan asiakkaan « ikenteestä paikasta?",
+    options: [
+      "Avustan häntä ottamalla käsivarresta kiinni kysymättä asiakkaalta tarvitseeko hän",
+      " pyydän asiakkaalta kiirehtimään autoon, koska kaupan edessä on vilkas liikenne.",
+      " Nouset ajoneuvosta ja tiedustelet, tarvitseeko hän apua.",
+    ],
+    correct: 2
+  },
+  {
+    q: "Lasten kanss työskentelevältä vaaditaan moitteetonta taustaa, Tästä s jokaselta koulun ja päivähoitokuljetuksia hoitavalta kuljettajalta vaaditaan rikosrekisteriote, kuka tuon otteen hankii?",
+    options: [
+      "kuljettajan",
+      "työantaja",
+      "Kuljettaja kuljetuksen tilaaja",
+    ],
+    correct: 0
+  },
+  {
+    q: "Uudella työnantajallasi on paljon sellaisia asiakkaita, jotka ovat käytti taksiaan jo useiden vuosien ajan erittäin suuren asiakasryhmän muodostuu näkövammaiset asiakkaat. Ensimmäinen vuorollasi, joka sattuu olemaan sinun asiakkaaksesi, tulee 48-vuotias Elmeri, joka on näkävammainen, eli maanantaisin uimassa läheisellä uimahallilla. Mitä sinun tulee muistaa näkövammaisten asiakaspalvelusta?",
+    options: [
+      "Näkövammaista palvelusta tulee muistaa puhua hiukan normaalia puheääntä äänellä.",
+      "Kuljettajan on hyvä kysyä asiakkaalta, miten häntä voi auttaa ja kertoa sanallis sijainista muista oleellista asioita.",
+    ],
+    correct: 1
+  },
+  {
+    q: "liikuntavammaisella asiakkaalla saattaa olla mukanaan avustaja, miten toimit llöin?",
+    options: [
+      "Eskustelen aina vain avustajan kanssa",
+      "keskustelen aina asiakkaan kanssa",
+      "pyydan kirjalliset ohjeet miten tulee toimia",
+    ],
+    correct: 1
+  },
+  {
+    q: "Eelis Auvisella on synnynnäinen näkövamma, jonka vuoksi hänellä ei ole lainkaan näkökykyä. hän käyttää liikkumisen apuna valkoista keppiä ja hänellä on apuna myös, opaskoira Eelis kulkee päivittäin taksilla kotoaan työpaikalleen, mitä teet, kun haet Eeliksen aamulla ja et ole kuljettanut häntä koskaan aikaisemmin?",
+    options: [
+      "odotat kadunvarressa, että Eelis saapuu taksin luokse. Avaat hänelle sisäpuolelta oven ja teet takapenkille tilaa hänen opaskoiralleen.",
+      "Soitat torvea, josta Eelis tietää, että olet saapunut.",
+      "Nouset autosta ja kerrot hänelle, että hänen taksinsa on saapunut ja esittelet itsesi. Kerrot missä taksi on ja tiedustelet missä hän haluaa istua.",
+    ],
+    correct: 2
+  },
+   {
+    q: "Mikä seuraavista vastausvaihtoehdoista on paras tapa toimia? asiakkaanasi on ikääntynyt avustettava henkilö. Asiakas jätetään hoitolaitoksen luona.",
+    options: [
+      "Kuljettajan vastuu päättyy, kun asiakas on noussut ulos autosta",
+      "Taksinkuljettaja tule huolehtii, että asiakas pääsee tarvittaessa hoitohenkilökuntaan.",
+      "Taksinkuljettaja tulee aina myös huolehtia asiakkaan ulkovaatteiden riisumisesta.",
+    ],
+    correct: 1
+  },
+  {
+    q: "Helmi on väikeavammainen 8-vuotias tyttö, joka käy viikoittain kuntoutuksessa heisessä hoitolaitoksessa. Hän käyttää pyörätuolia eikä pysty liikkumaan senäisesti lainkaan. Hänen äitinsä on kuullut, että Helmillä olisi oikeus saada selleen kansaneläkelaitoksen (kela) korvaamana vakiotaksi, jollain häntä kuljettaisi aman yrittäjän palveluksessa olevat kuljettajat, Helmi äiti tiedustelee sinulta, onko ämä mahdollista, miten vastaat hänelle?",
+    options: [
+      "Helmilla ei ole oikeutta vakiotaksi, sillä siihen ovat oikeutettu vain vanhukset ja työssä käyvät vaikeavammaiset aikuiset.",
+      "Helmillä on oikeutettu vakiotaksiin vain, jos hänen äitinsä kulkee matkat hänen kanssaan.",
+      "Helmi on oikeutettu vakiotaksiir",
+    ],
+    correct: 2
+  },
+  {
+    q: "Asiakas on tilannut kela-kyytinsä keskitetystä tilausvälitysnumerosta. asiakas maksaa?",
+    options: [
+      "Koko matkan hinnan.",
+      "Enintään omavastuun 50 euroa.",
+      "Enintään omavastuun 25 euroa.",
+    ],
+    correct: 2
+  },
+  {
+    q: "Miten neuvot asiakasta, kun asiakas tiedustelee sinulta vakiotaksioikeudesta kela korvattavien taksimatkojen osalta.",
+    options: [
+      
+      "Neuvon asiakasta soittamaan kenelle tahansa vapaana olevalle taksille.",
+      "Neuvon asiakasta ottamaan taksitolpalta taksin.",
+      "Neuvon asiakasta soittamaan kelan palvelunumeroon.",
+    ],
+    correct: 2
+  },
+  {
+    q: "olet viemässä tuttua asiakasta paikalliseen elokuvateatteriin, kun yhtäkkiä huomaat, että asiakas saa kouristuskohtauksen asiakas on sinulle entuudestaan tuttu, joten tiedät asiakkaan sairastavan epilaspi. Mikä on ensimmäinen ensiaputoimenpiteesi?",
+    options: [
+      "Pidän tiukasti kiinni asiakkaasta, jotta hän ei satuttaisi itseään kouristuskohtauksen aikana.",
+      "Huolehdit että asiakas ei kolhi päätään, mutta et pyri estämään kuoristusliikkeita, kun kouristukset vähentyvät käännät henkilö kylkiasentoon.",
+      "Jatkat normaalisti matkaa, koska aikataulusi on tiukka ja arvelet että kohtauksen Menevän ohi.",
+    ],
+    correct: 1
+  },
+   {
+    q: "Miten tulee toimia, kun pyörätuolissa olevan asiakkaan vaatteet jääneet siten, että iakkaalla on epämiellyttävä istua.",
+    options: [
+      "armistaa että asiakkaalla on mukava olla ja tarvittaessa auttaa oikaisemaan asiakkaan vaatteet.",
+      "Kuljettajan tehtävä ei ole suoristaa asiakkaan vaatteita.",
+      "Kuljettajan tehtävä on aina pukea asiakas ennen kyytiin ottamista.",
+    ],
+    correct: 0
+  },
+  {
+    q: "Miten tulee toimia, kun maksuhetkellä asiakas on haluton maksamaan matkaansa?",
+    options: [
+      "Kutsun paikalle poliisin elvittämään asiaa.",
+      "kutsun paikalle mahdollisimman monta muuta taksinkuljettaja selvittämään asiaa.",
+      "Otan asiakkaalta väkisin arvoesineen maksun pantiksi.",
+    ],
+    correct: 0
+  },
+  {
+    q: "Taksinkuljettajan on huono päivä ja hänestä tuntuu, mikään ei ole mennyt päivän aikana kovinkaan hyvin. hänen ei tee mieli hymyillä eikä varsinkaan puhua asiakkaiden kanssa. Asiakkaiden mielipiteet ärsyttävät ja eräälle asiakkaalle hän on erityisen töykeä. asiakas tekee tilanteesta valituksen. Onko asiakkaalla oikeus valittaa saamasta palvelusta?",
+    options: [
+      "kylla sillä asiakkaita kohtaan tulee aina käyttäytyä kohteliaasti asiallisesti.",
+      "Ei, sillä asiakas ei osta taksiin tullessaan iloista palvelua vaan kuljetuksen määränpäähän",
+      "Ei, sillä kyseinen tapa on Reinikaisen tapa toimia, eikä häntä siitä voi moittia",
+    ],
+    correct: 0
+  },
+  {
+    q: "Kyydissäsi on liikuntarajoi tarvitsisi kaksi pulloa viiniä. Asiakas pyytää sinut hakemaan viinipullot Alkos liikkuminen on hänelle hankala. Mitä vastaat asiakkaan pyyntöön?",
+    options: [
+      "Valitettavasti laki kieltää minua hakemasta alkoholia asiakkaille",
+      "Tottahan toki voin hakea aan autoon, kenelle juomat tulevat. Koska joud taksissa odottavalle asiakkaalle\"",
+      "Tottahan toki voin hakea, mutta sinun täytyy kirjoittaa minulle kirjallinen valtakirja, jossa valtuutat minut hakemaan itsellesi juomat",
+    ],
+    correct: 0
+  },
+  {
+    q: "Mikä seuraavista hyvää asiakaspalvelua?",
+    options: [
+      "kuljettaja tervehtii kohteliaasti ja tunnustelee, onko asiakas halukas jutustelemaan ja antaa päättää aiheesta",
+      "kuljettaja tervehtii kohteliaasti ja suostuu keskustelemaan ainoastaan ajoreitin liittyvistä asioista.",
+      "kuljettaja tervehtii kohteliaasti ja aloittaa keskustelun itselleen mieleisestä aiheesta.",
+    ],
+    correct: 0
+  },
+  {
+    q: "Taksisi kyytiin tulee 10-vuotias Elina, joka ilmoittaa, ettei haluaa käyttää turvavyötä, sillä se tuntuu epämiellyttävältä ja hän kertoo, äiti on antanut hänelle luvan matkustaa ilman turvavyön kiinnittämistä, Mitä teet?",
+    options: [
+      "Lapsen huoltajat voivat päättää, että Elina voi matkustaa ilman turvavyötä, joten Elina ei tarvitse laittaa turvavyötä.",
+      "Taksissa voi matkustaa ilman turvavyötä, joten Elina ei tarvitse laittaa turvavyötä.",
+      "Huolehdit että Elina kiinnittää turvavyötä. Yksin matkustava lapsi pitää taksissa aina turvavyötä.",
+    ],
+    correct: 2
+  },
+  {
+    q: "Miten tulee toimia, kun pyörätuolissa oleva asiakas haluaa itse siirtyä pyörätuolistaansa?",
+    options: [
+      "Asiakas ei voi koskaan siirtyä ilman kuljettajan apua.",
+      "Annat asiakkaan Siirtyä itse ja avustat tarvittaessa.",
+      "Jos matkustaja haluaa siirtyä itse ajoneuvoon, voit siirtyä odottamaan kuljettajan paikalla.",
+    ],
+    correct: 1
+  },
+  {
+    q: "Talvet saattavat suomessa olla erittäin kylmiä. eräänä helmikuun torsaiyönä ulkoma on -30 astetta pakkasta. Olet saanut lentokentältä varsin väsyneen oloisen asiakkaan, joka on nauttinut muutaman alkoholiannoksen. kyyti sujuu oikein mainiosti ja perille päästyäänne asiakas lähtee hoippumaan kohti kotioveaan. Miten toimit?",
+    options: [
+      "varmistat että asiakas pääsee kotiovesta sisään. Tämä jälkeen voit jatkaa matkaa.",
+      "Asiakas poistuessa taksista hän ei ole enää sinun vastuullasi, joten voit jatkaa matkaasi.",
+      "Puhaluttat asiakkaan ennen kuin päästät hänet ulos autosta. Jos hän puhaltaa yli 0,5 % Viet hänet poliisin selviämisasemalle.",
+    ],
+    correct: 0
+  },
+  {
+    q: "kuinka tulee toimia tilanteessa, jossa kyydin päätyttyä huomaat asiakkaan nohtaneen ajoneuvoon käsilaukkunsa?",
+    options: [
+      "voit viedä käsilaukun kotiisi ja jäädä odottamaan asiakkaan yhteydenottoa",
+      "Toimitat käsilaukun tilausvälitysyhtiön toimistolle viimeistään viikon kuluessa.",
+      "Toimitat käsilaukun viipymättä asiakkaalle tai poliisin löytötavaratoimistoon.",
+    ],
+    correct: 2
+  },
+  {
+    q: "kuljettaja pystyy vaikuttamaan merkittävästi asiakkaan matkustusmukavuuteen mitä sinulta odotetaan?",
+    options: [
+      "jatkuva keskustelu ylläpitoa.",
+      "Hyvää pelisilmää sillä joskus asiakkaat eivät haluaa keskustella ja taas asiakas haluaa juttukumppanin.",
+      "Huomaamatonta ja äänetöntä olemusta.",
+    ],
+    correct: 1
+  },
+  {
+    q: "Kuinka paljon taksissa saa enintään ylittää ajoneuvon istuinpaikkaluvun mukaisen henkilömäärän, jos kyseessä ei ole koulu- ja päivähoitokuljetus?",
+    options: [
+      "Ei yhtään",
+      "ylitys saa olla enintään 30 %.",
+      "Kuljettajan oman harkinnan voi päättää kuinka paljon voi ylittää.",
+    ],
+    correct: 0
+  },
+  {
+    q: "kuinka pitkään taksinkuljettajan ajolupa on enintään voimassa?",
+    options: [
+      "Viisi vuotta Viisitoista vuotta Toistaiseksi",
+      "Taksinkuljettajan ajoluva myöntää.",
+      "ELY-keskus liikenne. viestintävirasto trafi Poliisi",
+    ],
+    correct: 2
+  },
+  {
+    q: "Aulis on hankkinut itselleen taksinkuljettajan ajoluvan kolme vuotta sitten. Ajoluvan asemapaikka on Vantaa, Aulis on kuitenkin muuttumassa jyväskylään ja onkin jo löytynyt itselleen uuden työantajan uudesta kaupungistaan, voiko Aulis aloittaa työskentelyn tällä jyväskyläläisellä työnantajalla?",
+    options: [
+      "Ei, sillä taksinkuljettajan ajoluvan on voimassa vain kaksi vuotta.",
+      "kyllä, mutta suoritettuaan hyväksytysti jyväskylä paikallistuntemuskokeen ja haettuaan Ajoluvan kelpoisuusalueen laajentamista Liikenne ja- viestintävirasto Traficomilta.",
+      "Kyllä, sillä taksinkuljettaja ajolupa on voimassa koko mannersuomen alueella",
+    ],
+    correct: 2
+  },
+  {
+    q: "missä seuraavista kuljettaja voi kieltäytyä kyydistä?",
+    options: [
+      "Kyyti suuntautuu toiselle liikennealueelle.",
+      "Laillinen työaika ylittyisi",
+      "asiakas on menossa toiselle kunnan alueelle",
+    ],
+    correct: 1
+  },
+  {
+    q: "Kalle kuljettaja on ajanut opintojensa ohella Ismo isännälle neljä vuoden ajan. nyt hän on valmistanut opinnoissaan ja aikoo muuttaa toiselle paikkakunnalle, joten hän päättää työsuhteensa Ismo isäntään. kuinka on kallen irtisanomisaika?",
+    options: [
+      "14 päivää, sillä työsuhde on kestänyt alle viisi vuotta.",
+      "1 kuukausi, sillä työsuhde on yli vuoden, mutta alle viisi vuotta",
+      "Kalle voi lopettaa työnsä, sitten kun Ismo löytää itselleen uuden kuljettajan",
+    ],
+    correct: 1
+  },
+  {
+    q: "Seuraavassa kolme väittämää koskien taksinkuljettajan velvollisuuksia, mikä niistä mielestäsi on oikein?",
+    options: [
+      "Alle 135 cm:n pituinen lapsi tarvitsee aina turvalaitteen matkustaessa taksissa",
+      "Lapsi voi matkustaa taksilla ilman turvalaitetta, kunhan hän istuu takapenkillä ja turvavyöt kiinnitettynä",
+      "Alle 3-vuotias lapsi ei saa matkustaa taksissa ilman huoltajan kirjallinen suostumusta",
+    ],
+    correct: 0
+  },
+  {
+    q: "Miten kuljettajan tulee valita käytettävä ajoreitti kohteeseen, jos matkustaja jättää valinnan kuljettajalle ja kun matkan hinta perustuu matkan pituuteen tai matkaan käytettävään aikaan?",
+    options: [
+      "Kuljettajan ei tarvitse valita reittiä, koska asiakkaan tulee tietään reittiä perille.",
+      "Kuljettaja voi valita minkä reittiä hyvänsä.",
+      "Kuljettajan tulee valita matkustajan kannalta edullisin tarkoituksenmukainen reitti.",
+    ],
+    correct: 2
+  },
+  {
+    q: "kuka vastaa 15 vuotta täyttäneenä turvavyö käytöstä?",
+    options: [
+      "Kuljettaja.",
+      "Asiakas",
+      "Taksissa turvavyön käyttö on aina vapaaehtoista, joten turvavyön ei tarvitse välitä.",
+    ],
+    correct: 1
+  },
+   {
+    q: "Koskeeko työaikalaki taksinkuljettajaa?",
+    options: [
+      "Kyllä koskee.",
+      "Ei koske, jos siitä on sovittu työnantajan kanssa.",
+      "Ei koske missään tilanteissa,",
+    ],
+    correct: 0
+  },
+  {
+    q: "Milloin taksissa tulee olla alkolukko?",
+    options: [
+      "Aina, kun suoritetaan kunnan tilaamia koulu- ja päivähoitokuljetuksiin",
+      "Aina, kun kun asiakas otetaan kyytiin ilman ennakkotilausta.",
+      "Vain jos kuljettajalla on taksinkuljettajan ajoluvassa alkolukko vastaava ertyisehto.",
+    ],
+    correct: 0
+  },
+  {
+    q: "Missä seuraavissa tilanteista taksissa tulee olla kuljettajan nimi esilla?",
+    options: [
+      "Vain ennakkotilaus kuljetuksissa.",
+      "Kaikissa kuljetuksissa",
+      "Vain koulu- ja päivähoitokuljetuksissa",
+    ],
+    correct: 1
+  },
+  {
+    q: "Millä alueella taksinkuljettajan ajolupa on voimassa?",
+    options: [
+      "Kuljettajan pääasiallisen asuinkunnassa.",
+      "Euroopan unioniin alueella.",
+      "Manner Suomessa",
+    ],
+    correct: 2
+  },
+  {
+    q: "Mikä seuraavista on peruste taksinkuljettajan ajoluvan peruuttamiselle?",
+    options: [
+      "Kuljettaja ei ole työskennellyt viimeisen kolmen vuoden aikana taksinkuljettajan.",
+      "Alueella toimivat taksinkuljettajat ja taksiyrittäjät suosittelevat ajoluvan peruuttamiseen.",
+      "Kuljettaja on syyllistynyt törkeän liikkenneturvallisuus vaarantamista",
+    ],
+    correct: 2
+  },
+  {
+    q: "Mikä seuraavista kuljettajan työaika koskevista väittämistä ei pidä paikkaansa?",
+    options: [
+      "taksinkuljettajan vuorokautisen saa olla enimmillään 11 tuntia 24 tunnin ajanjaksossa Työaika on varsinaisen ajotyön lisäksi taksiasemalla oloaika auton siivoamiseen Työaika on myös kuljettajan työpäivän aikana pitämä kahden tunnin tauko.",
+      "Mikä seuraavista väittämä on virheellinen.",
+      "Ajoneuvo tulee olla rekisteröity luvanvaraiseen liikenteeseen. Kuljettajalla tulee olla aina mukana taksinkuljettajan ajolupa. Jokaisessa taksissa tulee olla alkolukko",
+    ],
+    correct: 2
+  },
+  {
+    q: "Mikä seuraavista väittämä on virheellinen.",
+    options: [
+      "Ajoneuvo tulee olla rekisteröity luvanvaraiseen liikenteeseen.",
+      "Kuljettajalla tulee olla aina mukana taksinkuljettajan ajolupa.",
+      "Jokaisessa taksissa tulee olla alkolukko",
+    ],
+    correct: 2
+  },
+  {
+    q: "Miten toimit, kun asiakas pyytää pysähtymään ja odottamaan paikassa jossa on pysähtyminen on kielletty?",
+    options: [
+      "Asiakkaalla on oikeus pysähtymispaikka, sillä hän maksaa kyydistä.",
+      "Taksinkuljettajan voi perustellusta syystä poiketa pysähtymis säännöistä.",
+      "Voit jäädä odottamaan sellaiseen paikkaan, jossa pysähtyminen on sallittu",
+    ],
+    correct: 2
+  },
+  {
+    q: "Kenellä on vastuu työvuorossa käytettävä taksiin liikennekelpoisuudesta?",
+    options: [
+      "Kuljettajalla.",
+      "Taksintarkastajalla.",
+      "Katsastajalla.",
+    ],
+    correct: 0
+  },
+  {
+    q: "Asiakas tulee kyytiin taksiasemalta ja ilmoittaa haluavansa osoitteeseen, joka ei ole sinulle tuttu ennestään, Kuinka toimit?",
+    options: [
+      "Lähdet ajamaan siihen suuntaan, missä epäilet osoitteen sijaitsevan.",
+      "Näpyttelet osoitteen navigaattorille ja seurat sen antama neuvoja",
+      "Kerrot asiakkaalle, osoite ei valitettavasti ole sinulle ennestään tuttu, tiedustelut samalla hiukan lisätietoja osoitteesta",
+    ],
+    correct: 2
+  },
+  {
+    q: "Mitä tarkoittaa taksinkuljettajalla vaadittavalla riittävällä kielitaidolla?",
+    options: [
+      "Se tarkoittaa sitä, että kuljettaja pystyy keskustelemaan asiakkaan kanssa sujuvasti päivän tapahtumista.",
+      "Se tarkoittaa sitä, että kuljettajan on pitänyt suorittaa kansalaisuuden kielikoe",
+      "Se tarkoittaa sitä, että kuljettaja kykenee kommunikoimaan asiakkaan kanssa siten, että asiakas pääsee turvallisesti oikean määränpäähänsä.",
+    ],
+    correct: 2
+  },
+  {
+    q: "Jokaisen työsuhteessa olevan taksinkuljettaja velvollisuutensa on täyttää kuljettajan ajopäiväkirja mitä ajopäiväkirja muun maussa merkitään?",
+    options: [
+      "Työvuoron aloitus ja tauot.",
+      "Tauot ja niiden aikana nautittu ravinto.",
+      "lyhyt selvitys työssä tapahtuneista ongelmatilanteista.",
+    ],
+    correct: 0
+  },
+  {
+    q: "Yleinen hätänumeron on?",
+    options: [
+      "118",
+      "119",
+      "112",
+      
+    ],
+    correct: 2
+  },
+  {
+    q: "Saat suuryrityksestä kyytisi kiireisen toimitusjohtajan. Hän JUOKS taksille ja huikkaa Jo matkalla, että hänellä on hirvittävä kiire, sillä tärkeä kokous alkaa jo 15 minuutin kuluttua. on iltapäivän ruuhka-aika ja matka on - sen verran pitkä, että tiedät jo etukäteen, ettei sitä pysty millään ajamaan siinä ajassa. Kerrot tästä asiakkaalle, jolloin hän vaati sinua ajamaan ylinopeutta. asiakas lupautuu maksamaan mahdolliset ylinopeussakot. kuinka toimit?",
+    options: [
+      "Kerrot asiakkaalle, ettet voi ajaa ylinopeutta, mutta teet parhaas! jotta hän pääsee turvallisesti perille Nopein mahdollista reittiä",
+      "Toteat, että sopimus kuulostaa reilulta ja lähdet ajamaan kohti määränpäähän nii kuin pääsee.",
+      "Toteat asiakkaalle, että et voi ottaa häntä lainkaan kyytiin ja kutsut poliisi paikalle, sillä asiakas yllytti sinua rikokseen.",
+    ],
+    correct: 0
+  },
+  {
+    q: "Ennokoivassa ajotavassa tarkein on?",
+    options: [
+      "Osata toimia oikein onnettoomden satuttua.",
+      "Taitoa toimia oikein vaaratilanteessa onnettomuuden välttämiseksi.",
+      "Pyrkiä ajamaan niin että ei joudu vaara- eikä onnettomuustilanteeseen",
+    ],
+    correct: 2
+  },
+  {
+    q: "Ajat melkein vilkasliikenteistä valtatie kohti taksiasemaa.yhtäkki huomaat kaukana edellä polkupyöräilijän horjahtavan, kaatuvan ja jäävän maahan makaamaan keskelle tietä liikkumattomana mitä sinun ensimmäinen Ensiaputoimipiteesi?",
+    options: [
+      "Hengitysteiden avaaminen",
+      "Polkupyöräilijän tutkiminen mahdollisten murtumien ja verenvuotojen havaitsemiseksi.",
+      "Polkupyöräilijä siirtäminen turvallisempaa paikkaan.",
+    ],
+    correct: 0
+  },
+  {
+    q: "Mikä seuraavista lisää eniten taksinkuljettajan loukkaantumisriskiä liikenteessä?",
+    options: [
+      "ajoneuvon huono tekninen kunto",
+      "turvavyön käyttämättömyys",
+      "Aggressiivisesti käyttäytyvät asiakkaat.",
+    ],
+    correct: 1
+  },
+  {
+    q: "Kuinka kauan rattijuopumukseen syyllistynyt ei voi hakea taksi ajolupa?",
+    options: [
+      "Vuoden ajan.",
+      "Kolme vuoden ajan",
+      "Viiden vuoden ajan",
+    ],
+    correct: 2
+  },
+  {
+    q: "Taksinkuljettajan ajolupa hakevan henkilö on täytettävä tietyt terveysvaatimuksen. terveysvaatimusten täyttyminen osoitetaan?",
+    options: [
+      "Lääkärin tarkastuksella ja siitä saatavalla todistuksella taksinkuljettajan ajolupa hakiessa",
+      "Omalla kirjallisella terveydentila koskevalla raportilla",
+      "Terveydentila ei tarvitse todistaa millään tavalla.",
+    ],
+    correct: 0
+  },
+  {
+    q: "Taksinkuljettajan ajoluvan voi peruuttaa?",
+    options: [
+      "Poliisi",
+      "Taksin paikallisyhdisty",
+      "Liikenne- ja viestintävirasto",
+    ],
+    correct: 0
+  },
+  {
+    q: "Kuinka pitkään B-luokan ajo-oikeuden on pitänyt olla jotta taksikuljettajan ajolupa voidaan myöntää?",
+    options: [
+      "Vähintään yhdenvuoden ajan",
+      "Vähintään kolmen vuoden ajan",
+      "Vähintään viiden vuoden ajan",
+    ],
+    correct: 0
+  },
+  {
+    q: "Miten toimit, kun kyytiin tulee asiakas, joka ilmoittaa ettei hän halua keskustella?",
+    options: [
+      "Annan asiakkaan istua rauhassa kyydissä ja ainoastaan pyydän reittiin liittyviä asioita",
+      "Kuljettajan tulee osoittaa asiakkaalle, että hänellä on huono vuorovaikutus eikä hän halua keskustella",
+      "Kuljettaja yrittää keskustella koko matkan ajan, sillä taksin kuljettaja huolehtii keskustelun ylläpitämisestä",
+    ],
+    correct: 0
+  },
+  {
+    q: "Mikä viranomainen myöntää taksinkuljettajan ajoluvan?",
+    options: [
+      "Poliisi",
+      "Liikenne-viestintävirasto",
+      "TE-toimisto",
+    ],
+    correct: 1
+  },
+  {
+    q: "Aino on aloittanut työvuoronsa 5.30 hän on aina ollut aamuvirkku ihminen ja lähtee mielellään töihin aikaisin hänen, aamunsa koostuu lähinnä muiden aamuvirkkujen kuljettamisesta työpaikalleen. Noin puoli kahdeksan aikaan hän aloittaa koululaisten kuljetukset. Aamu kuluu mielenkiintoisessa monipuolisessa tehtävissä yleensä erittäin nopeasti, milloin Ainon on pidettävä ensimmäinen taukoa?",
+    options: [
+      "Sitten kun hän tuntee itsensä väsyneeksi Työaikalaki määrittelee. ettei tarkkailla jaksamisestaan ja tauottaa työpäivänsä tarpeen mukaan.",
+      "Viimeistään klo 11. Sillä kuljettajan yhtämittainen työaika saa olla 5,5 tuntia",
+      "Viimeistään klo 10 sillä kuljettajan yhtämittainen työaika saa olla 4,5 tuntia",
+    ],
+    correct: 1
+  },
+  {
+    q: "saako taksinkuljettajan työskennellä yhtäjaksoisesti 15 tuntia?",
+    options: [
+      "kyllä, jos työtä ei voida muulla tavoin tarkoituksenmukaisesti järjestää.",
+      "Kyllä, jos kuljettaja itse haluaa",
+      "Kyllä työnantaja kuulu taksityöantaja liittoon.",
+    ],
+    correct: 1
+  },
+  {
+    q: "Millä maksuvälineillä asiakkaalla on oikeus maksaa taksimatkansa, jos hän tulee taksiaasemalta ilman etukäteen tehty tilausta?",
+    options: [
+      "Asiakas voi maksaa taksimatkansa ainoastaan käteisellä.",
+      "kuljettajan tehtävänä on päättää käytettävä maksuväline.",
+      "Asiakkaalla on oikeus maksaa matkansa käteisellä ja yleisimmällä maksukortilla",
+    ],
+    correct: 2
+  },
+  {
+    q: "Laissa liikenteen palveluista on lueteltu erilaisia laatuvaatimuksia. Mikä seuraavista vaihtoehdoista pitää paikkansa?",
+    options: [
+      "Laatuvaatimukset koskevat ainoastaan taksiluvan haltijaa.",
+      "laatuvaatimukset koskevat jokaista taksinkuljettaja.",
+      "Laatuvaatimukset koskevat ainoastaan niitä yrittäjiä, joilla on enemmän kuin kaksi työntekijää vakituisessa.",
+    ],
+    correct: 1
+  },
+  {
+    q: "Milloin tarvitsee asiakkaalle tarjota kuitti taksikyydistä?",
+    options: [
+      "Jos kyyti on tilattu applikaatiolia",
+      "Jos taksin hinta on kiintiö",
+      "Kyydistä on annettava kuitti",
+    ],
+    correct: 2
+  },
+];
+
+
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
+let questionsCopy = questions.map(q => {
+  const options = [...q.options];
+  const correctText = q.options[q.correct];
+  shuffleArray(options);
+  return {
+    q: q.q,
+    options: options,
+    correct: options.indexOf(correctText)
+  };
+});
+
+let current = 0;
+let correctCount = 0;
+let wrongCount = 0;
+let userAnswers = [];
+let totalTime = 69 * 60;
+let timerInterval;
+
+function formatTime(seconds) {
+  const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+  const s = String(seconds % 60).padStart(2, '0');
+  return m + ":" + s;
+}
+
+function updateTimer() {
+  document.getElementById("timer").innerText = "Aikaa jäljellä: " + formatTime(totalTime);
+  totalTime--;
+  if (totalTime < 0) {
+    clearInterval(timerInterval);
+    finishQuiz();
+  }
+}
+
+function startTimer() {
+  timerInterval = setInterval(updateTimer, 1000);
+}
+
+window.onload = () => {
+  showQuestion();
+  startTimer();
+};
+
+function showQuestion() {
+  const q = questionsCopy[current];
+  document.getElementById("questionBox").innerText = (current + 1) + ". " + q.q;
+  const choicesBox = document.getElementById("choicesBox");
+  choicesBox.innerHTML = "";
+  q.options.forEach((opt, i) => {
+    const label = document.createElement("label");
+    label.innerHTML = `<input type="radio" name="choice" value="${i}"> ${opt}`;
+    choicesBox.appendChild(label);
+  });
+}
+
+function checkAnswer() {
+  const selected = document.querySelector('input[name="choice"]:checked');
+  if (!selected) return alert("Valitse vaihtoehto ensin!");
+  const q = questionsCopy[current];
+  const answer = parseInt(selected.value);
+  const options = document.querySelectorAll('input[name="choice"]');
+  options.forEach((input, i) => {
+    const label = input.parentElement;
+    if (i === q.correct) {
+      label.style.backgroundColor = '#c8f7c5';
+    } else if (i === answer) {
+      label.style.backgroundColor = '#f9c0c0';
+    }
+  });
+}
+
+function nextQuestion() {
+  const selected = document.querySelector('input[name="choice"]:checked');
+  if (selected) {
+    const answer = parseInt(selected.value);
+    userAnswers.push(answer);
+    if (answer === questionsCopy[current].correct) {
+      correctCount++;
+    } else {
+      wrongCount++;
+    }
+  } else {
+    userAnswers.push(null);
+    wrongCount++;
+  }
+  current++;
+  if (current < questionsCopy.length) {
+    showQuestion();
+  } else {
+    finishQuiz();
+  }
+}
+
+function finishQuiz() {
+  clearInterval(timerInterval);
+  document.getElementById("quizBox").style.display = "none";
+  let resultHTML = `<p><strong>Oikein:</strong> ${correctCount} / <strong>Väärin:</strong> ${wrongCount}</p><ol>`;
+  questionsCopy.forEach((q, i) => {
+    const isCorrect = userAnswers[i] === q.correct;
+    const userText = userAnswers[i] != null ? q.options[userAnswers[i]] : "Ei vastausta";
+    resultHTML += `<li>${q.q}<br><em>Vastauksesi:</em> ${userText} – <span class="${isCorrect ? "correct" : "wrong"}">${isCorrect ? "Oikein" : "Väärin"}</span></li>`;
+  });
+  resultHTML += "</ol>";
+  document.getElementById("resultBox").innerHTML = resultHTML;
+}
+</script>
+</body>
+</html>
